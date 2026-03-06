@@ -13,7 +13,14 @@ function clearSupabaseCookies(request: NextRequest, response: NextResponse) {
 
 export const updateSession = async (request: NextRequest) => {
   const response = NextResponse.next({ request });
-  const { supabaseUrl, supabaseAnonKey } = getSupabaseEnv();
+  let supabaseUrl: string;
+  let supabaseAnonKey: string;
+
+  try {
+    ({ supabaseUrl, supabaseAnonKey } = getSupabaseEnv());
+  } catch {
+    return response;
+  }
 
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
@@ -48,7 +55,7 @@ export const updateSession = async (request: NextRequest) => {
       return response;
     }
 
-    throw error;
+    return response;
   }
 
   return response;
