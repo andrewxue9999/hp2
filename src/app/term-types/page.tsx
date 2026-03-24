@@ -1,3 +1,4 @@
+import Link from "next/link";
 import GoogleAuthButton from "@/components/google-auth-button";
 import SignOutButton from "@/components/sign-out-button";
 import UploadCaptionForm from "@/components/upload-caption-form";
@@ -450,10 +451,10 @@ export default async function TermTypesPage({ searchParams }: TermTypesPageProps
 
   const captionIds = memes.map((meme) => String(meme.captionId));
 
-  const { data: voteData, error: voteError } = await supabase
-    .from("caption_votes")
-    .select("caption_id, vote_value")
-    .eq("profile_id", user.id);
+  const [{ data: voteData, error: voteError }, { map: scoreMap, error: scoreError }] = await Promise.all([
+    supabase.from("caption_votes").select("caption_id, vote_value").eq("profile_id", user.id),
+    loadScores(supabase, captionIds),
+  ]);
 
   const userVoteMap = new Map<string, number>();
   if (!voteError) {
@@ -463,8 +464,6 @@ export default async function TermTypesPage({ searchParams }: TermTypesPageProps
       userVoteMap.set(String(vote.caption_id), parsedVote);
     }
   }
-
-  const { map: scoreMap, error: scoreError } = await loadScores(supabase, captionIds);
 
   const unseenMemes = memes.filter((meme) => !userVoteMap.has(String(meme.captionId)));
   const historyMemes = memes.filter((meme) => userVoteMap.has(String(meme.captionId)));
@@ -573,7 +572,7 @@ export default async function TermTypesPage({ searchParams }: TermTypesPageProps
           <p className="mt-1 text-xs text-slate-500">{user.email}</p>
 
           <nav className="mt-6 space-y-2">
-            <a
+            <Link
               className={`block rounded-xl px-3 py-2 text-sm font-medium ${
                 activeTab === "main"
                   ? "bg-violet-100 text-violet-800"
@@ -582,8 +581,8 @@ export default async function TermTypesPage({ searchParams }: TermTypesPageProps
               href={tabHref("main")}
             >
               Main
-            </a>
-            <a
+            </Link>
+            <Link
               className={`block rounded-xl px-3 py-2 text-sm font-medium ${
                 activeTab === "upload"
                   ? "bg-violet-100 text-violet-800"
@@ -592,8 +591,8 @@ export default async function TermTypesPage({ searchParams }: TermTypesPageProps
               href={tabHref("upload")}
             >
               Upload Meme
-            </a>
-            <a
+            </Link>
+            <Link
               className={`block rounded-xl px-3 py-2 text-sm font-medium ${
                 activeTab === "history"
                   ? "bg-violet-100 text-violet-800"
@@ -602,8 +601,8 @@ export default async function TermTypesPage({ searchParams }: TermTypesPageProps
               href={tabHref("history")}
             >
               View History
-            </a>
-            <a
+            </Link>
+            <Link
               className={`block rounded-xl px-3 py-2 text-sm font-medium ${
                 activeTab === "popular"
                   ? "bg-violet-100 text-violet-800"
@@ -612,8 +611,8 @@ export default async function TermTypesPage({ searchParams }: TermTypesPageProps
               href={tabHref("popular")}
             >
               Popular
-            </a>
-            <a
+            </Link>
+            <Link
               className={`block rounded-xl px-3 py-2 text-sm font-medium ${
                 activeTab === "controversial"
                   ? "bg-violet-100 text-violet-800"
@@ -622,7 +621,7 @@ export default async function TermTypesPage({ searchParams }: TermTypesPageProps
               href={tabHref("controversial")}
             >
               Controversial
-            </a>
+            </Link>
           </nav>
 
           <div className="mt-6 rounded-xl border border-violet-100 bg-violet-50 p-3 text-xs text-slate-700">

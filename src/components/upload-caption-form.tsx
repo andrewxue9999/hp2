@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -13,6 +13,7 @@ const SUPPORTED_TYPES = new Set([
   "image/gif",
   "image/heic",
 ]);
+const ACCEPTED_FILE_TYPES = Array.from(SUPPORTED_TYPES).join(",");
 
 type CaptionRecord = {
   id?: number | string | null;
@@ -55,8 +56,6 @@ export default function UploadCaptionForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<GeneratedResult[]>([]);
-
-  const accept = useMemo(() => Array.from(SUPPORTED_TYPES).join(","), []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -196,7 +195,7 @@ export default function UploadCaptionForm() {
           Choose File
         </label>
         <input
-          accept={accept}
+          accept={ACCEPTED_FILE_TYPES}
           className="sr-only"
           id="meme-upload-file"
           onChange={(event) => setFile(event.target.files?.[0] ?? null)}
