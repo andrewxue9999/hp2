@@ -78,13 +78,17 @@ export function getRowId(row: GenericRow) {
   return pickFirstString(row, ["id", "caption_id", "image_id", "profile_id"]);
 }
 
-export function getRowDate(row: GenericRow) {
-  const raw = pickFirstString(row, DATE_KEYS);
+export function getRowDateByKeys(row: GenericRow, keys: string[]) {
+  const raw = pickFirstString(row, keys);
   if (!raw) return null;
 
   const parsed = new Date(raw);
   if (Number.isNaN(parsed.getTime())) return null;
   return parsed;
+}
+
+export function getRowDate(row: GenericRow) {
+  return getRowDateByKeys(row, DATE_KEYS);
 }
 
 export function getImageUrl(row: GenericRow) {

@@ -7,6 +7,7 @@ export type AdminFieldInput = "text" | "textarea" | "checkbox" | "number" | "url
 export type AdminFieldConfig = {
   key: string;
   label?: string;
+  description?: string;
   input?: AdminFieldInput;
 };
 
@@ -81,6 +82,31 @@ export const adminTableConfigs: AdminTableConfig[] = [
     searchKeys: ["description", "url", "user_id"],
     orderBy: "id",
     fieldOrder: ["url", "description", "is_common_use", "user_id"],
+    fieldOverrides: {
+      url: {
+        key: "url",
+        label: "Image URL",
+        description: "Primary link for the image. You can paste a hosted image URL or upload a file below.",
+        input: "url",
+      },
+      description: {
+        key: "description",
+        description: "Short note to help identify or search for this image later.",
+        input: "textarea",
+      },
+      is_common_use: {
+        key: "is_common_use",
+        label: "Common Use",
+        description: "Marks this image as generally reusable across the app.",
+        input: "checkbox",
+      },
+      user_id: {
+        key: "user_id",
+        label: "User ID",
+        description: "Optional owner or source user linked to this image record.",
+        input: "text",
+      },
+    },
   },
   {
     slug: "humor-flavors",
@@ -326,6 +352,7 @@ export function getEditableFields(config: AdminTableConfig, referenceRow: Generi
     return {
       key,
       label: override?.label ?? toLabel(key),
+      description: override?.description,
       input: override?.input ?? inferInputFromValue(key, currentValue),
     };
   });

@@ -35,16 +35,19 @@ function renderFieldInput(field: AdminFieldConfig, row: GenericRow | null) {
   if (field.input === "checkbox") {
     return (
       <label
-        className="flex items-center gap-3 rounded-[1.2rem] border border-white/10 bg-slate-950/35 px-4 py-3 text-sm text-slate-200"
+        className="flex items-start gap-3 rounded-[1.2rem] border border-white/10 bg-slate-950/35 px-4 py-3 text-sm text-slate-200"
         key={field.key}
       >
         <input
-          className="h-4 w-4 accent-cyan-300"
+          className="mt-0.5 h-4 w-4 accent-cyan-300"
           defaultChecked={asBoolean(rawValue) === true}
           name={field.key}
           type="checkbox"
         />
-        {field.label}
+        <span className="min-w-0">
+          <span className="block">{field.label}</span>
+          {field.description ? <span className="mt-1 block text-xs leading-5 text-slate-400">{field.description}</span> : null}
+        </span>
       </label>
     );
   }
@@ -58,6 +61,7 @@ function renderFieldInput(field: AdminFieldConfig, row: GenericRow | null) {
           defaultValue={typeof rawValue === "string" ? rawValue : ""}
           name={field.key}
         />
+        {field.description ? <span className="mt-2 block text-xs leading-5 text-slate-400">{field.description}</span> : null}
       </label>
     );
   }
@@ -71,6 +75,7 @@ function renderFieldInput(field: AdminFieldConfig, row: GenericRow | null) {
         name={field.key}
         type={field.input ?? "text"}
       />
+      {field.description ? <span className="mt-2 block text-xs leading-5 text-slate-400">{field.description}</span> : null}
     </label>
   );
 }
@@ -197,6 +202,11 @@ export default async function AdminResourcePage({ slug, searchParams }: Resource
             <section className="rounded-[2rem] border border-white/10 bg-white/5 p-6">
               <p className="text-xs uppercase tracking-[0.26em] text-cyan-100/65">Create</p>
               <h3 className="mt-2 text-2xl font-semibold text-white">Add {config.singularLabel}</h3>
+              {slug === "images" ? (
+                <p className="mt-2 text-sm text-slate-300">
+                  Add a new image by pasting its URL or uploading a file, then fill in any helpful metadata.
+                </p>
+              ) : null}
 
               <form action={createRecordAction} className="mt-5 space-y-4">
                 <input name="table_slug" type="hidden" value={slug} />
@@ -212,6 +222,9 @@ export default async function AdminResourcePage({ slug, searchParams }: Resource
                       name="image_file"
                       type="file"
                     />
+                    <span className="mt-2 block text-xs leading-5 text-slate-400">
+                      Optional. Uploading a file will fill the image URL automatically after upload.
+                    </span>
                   </label>
                 ) : null}
 
@@ -229,6 +242,12 @@ export default async function AdminResourcePage({ slug, searchParams }: Resource
             <section className="rounded-[2rem] border border-white/10 bg-white/5 p-6">
               <p className="text-xs uppercase tracking-[0.26em] text-amber-100/65">Update</p>
               <h3 className="mt-2 text-2xl font-semibold text-white">Edit selected {config.singularLabel}</h3>
+              {slug === "images" ? (
+                <p className="mt-2 text-sm text-slate-300">
+                  Clicking <span className="font-medium text-white">Edit</span> on an image loads that image&apos;s current
+                  details into this form so you can update them here.
+                </p>
+              ) : null}
 
               <form action={updateRecordAction} className="mt-5 space-y-4">
                 <input name="table_slug" type="hidden" value={slug} />
@@ -245,6 +264,9 @@ export default async function AdminResourcePage({ slug, searchParams }: Resource
                       name="image_file"
                       type="file"
                     />
+                    <span className="mt-2 block text-xs leading-5 text-slate-400">
+                      Optional. Upload a new file here to replace the current image URL with a fresh uploaded file.
+                    </span>
                   </label>
                 ) : null}
 
@@ -350,8 +372,11 @@ export default async function AdminResourcePage({ slug, searchParams }: Resource
                         className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white transition hover:bg-white/10"
                         href={`/admin/${slug}?edit=${encodeURIComponent(id)}`}
                       >
-                        Edit
+                        Edit in update form on left
                       </Link>
+                    ) : null}
+                    {config.updateEnabled ? (
+                      <p className="text-xs text-slate-400">Loads this record into the update form on the left.</p>
                     ) : null}
                   </div>
 

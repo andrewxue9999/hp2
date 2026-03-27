@@ -7,6 +7,7 @@ import {
   getCaptionText,
   getImageUrl,
   getProfileName,
+  getRowDateByKeys,
   getRowDate,
   getRowId,
   type GenericRow,
@@ -37,7 +38,11 @@ function getCoverageImageUrl(caption: GenericRow, imageMap: Map<string, GenericR
   return getImageUrl(joinedImage ?? {}) ?? getImageUrl(caption);
 }
 
-function buildDailySeries(rows: GenericRow[], label: string) {
+function buildDailySeries(
+  rows: GenericRow[],
+  label: string,
+  getDate: (row: GenericRow) => Date | null = getRowDate,
+) {
   const now = new Date();
   const days = Array.from({ length: 7 }, (_, index) => {
     const date = new Date(now);
@@ -53,7 +58,7 @@ function buildDailySeries(rows: GenericRow[], label: string) {
   const map = new Map(days.map((day) => [day.key, day]));
 
   for (const row of rows) {
-    const date = getRowDate(row);
+    const date = getDate(row);
     if (!date) continue;
     const key = date.toISOString().slice(0, 10);
     const current = map.get(key);
@@ -199,7 +204,16 @@ export default async function AdminDashboardPage() {
 
   const freshImages = buildDailySeries(images, "Images");
   const freshCaptions = buildDailySeries(captions, "Captions");
-  const freshVotes = buildDailySeries(votes, "Votes");
+  const freshVotes = buildDailySeries(votes, "Vote Updates", (row) =>
+    getRowDateByKeys(row, [
+      "modified_datetime_utc",
+      "modified_at_utc",
+      "updated_at",
+      "created_datetime_utc",
+      "created_at_utc",
+      "created_at",
+    ]),
+  );
 
   return (
     <div className="space-y-6">
