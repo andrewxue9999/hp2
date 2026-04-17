@@ -14,6 +14,7 @@ import {
 } from "@/lib/admin/config";
 import {
   asBoolean,
+  asNumber,
   asString,
   formatDateTime,
   getImageUrl,
@@ -27,6 +28,13 @@ import { createAdminClient } from "@/lib/supabase/admin";
 type ResourcePageProps = {
   slug: string;
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
+
+type CaptionVoteStats = {
+  upvotes: number;
+  downvotes: number;
+  totalVotes: number;
+  upvoteRate: number | null;
 };
 
 function renderFieldInput(field: AdminFieldConfig, row: GenericRow | null) {
@@ -114,6 +122,38 @@ async function resolveTableName(
   throw new Error(`Could not find any matching table for ${table}.`);
 }
 
+function buildCaptionVoteStats(voteRows: GenericRow[]) {
+  const stats = new Map<string, CaptionVoteStats>();
+
+  for (const row of voteRows) {
+    const captionId = asString(row.caption_id);
+    const voteValue = asNumber(row.vote_value);
+    if (!captionId || voteValue === null) continue;
+
+    const current = stats.get(captionId) ?? {
+      upvotes: 0,
+      downvotes: 0,
+      totalVotes: 0,
+      upvoteRate: null,
+    };
+
+    if (voteValue > 0) {
+      current.upvotes += 1;
+      current.totalVotes += 1;
+    } else if (voteValue < 0) {
+      current.downvotes += 1;
+      current.totalVotes += 1;
+    } else {
+      continue;
+    }
+
+    current.upvoteRate = current.totalVotes > 0 ? current.upvotes / current.totalVotes : null;
+    stats.set(captionId, current);
+  }
+
+  return stats;
+}
+
 export default async function AdminResourcePage({ slug, searchParams }: ResourcePageProps) {
   const config = getAdminTableConfig(slug);
   if (!config) {
@@ -133,10 +173,13 @@ export default async function AdminResourcePage({ slug, searchParams }: Resource
     tableQuery = tableQuery.order(config.orderBy, { ascending: false });
   }
 
-  const [{ data: rowData = [], error }, relatedStepsResult] = await Promise.all([
+  const [{ data: rowData = [], error }, relatedStepsResult, captionVotesResult] = await Promise.all([
     tableQuery,
     slug === "humor-flavors"
       ? admin.from("humor_flavor_steps").select("*").order("id", { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
+    slug === "captions"
+      ? admin.from("caption_votes").select("caption_id, vote_value")
       : Promise.resolve({ data: [], error: null }),
   ]);
 
@@ -144,8 +187,13 @@ export default async function AdminResourcePage({ slug, searchParams }: Resource
     throw new Error(error.message);
   }
 
+  if (captionVotesResult.error) {
+    throw new Error(captionVotesResult.error.message);
+  }
+
   const rows = (rowData as GenericRow[]).filter((row) => matchesRowQuery(row, query, config.searchKeys));
   const relatedSteps = (relatedStepsResult.data ?? []) as GenericRow[];
+  const captionVoteStats = buildCaptionVoteStats((captionVotesResult.data ?? []) as GenericRow[]);
   const selectedRow = selectedId ? rows.find((row) => getRowId(row) === selectedId) ?? null : rows[0] ?? null;
   const hasMutationPanels = config.createEnabled || (config.updateEnabled && Boolean(selectedRow));
   const referenceRow = selectedRow ?? rows[0] ?? null;
@@ -307,6 +355,7 @@ export default async function AdminResourcePage({ slug, searchParams }: Resource
               const isSelected = selectedRow ? getRowId(selectedRow) === id : false;
               const imageUrl = getImageUrl(row);
               const flavorId = findRelatedFlavorId(row);
+              const captionStats = slug === "captions" ? captionVoteStats.get(id) : null;
               const steps =
                 slug === "humor-flavors"
                   ? relatedSteps.filter((step) => findRelatedFlavorId(step) === flavorId)
@@ -344,6 +393,36 @@ export default async function AdminResourcePage({ slug, searchParams }: Resource
                   <p className="mt-3 break-words text-sm leading-7 text-slate-200">
                     {summarizeRow(row, config) ?? `No summary fields available for this ${config.singularLabel}.`}
                   </p>
+
+                  {captionStats ? (
+                    <div className="mt-4 grid gap-3 rounded-[1.2rem] border border-sky-300/20 bg-sky-300/10 p-4 sm:grid-cols-3">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.18em] text-sky-100/70">Votes</p>
+                        <p className="mt-2 text-sm font-semibold text-white">
+                          {captionStats.upvotes} / {captionStats.downvotes}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-300">Upvotes / downvotes</p>
+                      </div>
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.18em] text-sky-100/70">Upvote Rate</p>
+                        <p className="mt-2 text-sm font-semibold text-white">
+                          {captionStats.upvoteRate === null ? "0.0%" : `${(captionStats.upvoteRate * 100).toFixed(1)}%`}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-300">Share of votes that were positive</p>
+                      </div>
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.18em] text-sky-100/70">Total Ratings</p>
+                        <p className="mt-2 text-sm font-semibold text-white">{captionStats.totalVotes}</p>
+                        <p className="mt-1 text-xs text-slate-300">Total user rating submissions</p>
+                      </div>
+                    </div>
+                  ) : slug === "captions" ? (
+                    <div className="mt-4 rounded-[1.2rem] border border-white/10 bg-slate-950/45 p-4">
+                      <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Votes</p>
+                      <p className="mt-2 text-sm font-semibold text-white">0 / 0</p>
+                      <p className="mt-1 text-xs text-slate-300">No ratings submitted for this caption yet.</p>
+                    </div>
+                  ) : null}
 
                   {steps.length > 0 ? (
                     <div className="mt-4 min-w-0 rounded-[1.2rem] border border-white/10 bg-slate-950/55 p-4">
